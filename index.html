@@ -965,13 +965,32 @@ function touchEnd(ev) {
         ev.preventDefault();
         const touch = ev.changedTouches[0];
         
+        // Sürüklenen öğeyi geçici olarak gizle
         currentDragElement.style.display = 'none';
+        
+        // Dokunmanın bittiği noktadaki hedef öğeyi bul
         const target = document.elementFromPoint(touch.clientX, touch.clientY);
+        
+        // Sürüklenen öğeyi tekrar görünür yap
         currentDragElement.style.display = 'block';
+
+        // Sayı kutucuklarına bırakma kontrolü
         if (target && target.classList.contains('result-digit')) {
             handleDrop(target, currentDragElement.getAttribute('data-value'), currentDragElement.getAttribute('data-color-class'));
+        } 
+        
+        // 🚨 YENİ KONTROL: Elde kutucuğuna bırakma kontrolü
+        else if (target && target.id === 'carryBox') {
+            const value = currentDragElement.getAttribute('data-value');
+            if (value !== "") {
+                document.getElementById('carryBox').textContent = value;
+                userCarry = parseInt(value, 10);
+                checkAnswer();
+            }
         }
+        // -----------------------------------------------------
 
+        // Sürüklenen öğenin stilini sıfırla
         currentDragElement.style.position = 'relative';
         currentDragElement.style.left = '0';
         currentDragElement.style.top = '0';
@@ -1130,4 +1149,5 @@ document.addEventListener('DOMContentLoaded', () => {
     </script>
 </body>
 </html>
+
 
