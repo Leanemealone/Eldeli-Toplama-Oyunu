@@ -210,7 +210,7 @@
 
 .carry-zone {
     display: flex;
-    justify-content: flex-start; 
+    justify-content: flex-end; /* 🔥 GÜNCELLENDİ: Elde kutusunu sağa yaslamak için */
     align-items: center;
     gap: 10px;
     margin-bottom: 10px;
@@ -230,7 +230,8 @@
     justify-content: center;
     font-size: 0.7em;
     background-color: #fff7e6;
-color: #FF0000;
+    color: #FF0000;
+    margin-right: 60px; /* 🔥 YENİ KURAL: Onlar basamağına hizalamak için boşluk */
 }
 
         .result-zone { 
@@ -417,6 +418,11 @@ color: #FF0000;
             .rainbow-title {
                 font-size: 1.8em; 
             }
+            
+            /* 🔥 YENİ KURAL: MOBİLDE ONLAR BASAMAĞINA HİZALAMA 🔥 */
+            .carry-box {
+                margin-right: 40px !important; 
+            }
         }
     </style>
 </head>
@@ -482,7 +488,7 @@ color: #FF0000;
           
                 <span id="playerNameDisplay" class="header-item">Oyuncu: -</span>
                 <span id="scoreDisplay" class="header-item">Puan: 0</span>
-                <span id="timerDisplay" class="header-item">⏳ Süre: 120</span> 
+                <span id="timerDisplay" class="header-item">⏳ Süre: 180</span> 
             </div>
 
             <div class="operation-container">
@@ -543,8 +549,8 @@ const GAME_DURATION = 180; // <-- Sizin güncellediğiniz 180 saniye
 
 // ################## YENİ SES TANIMLAMALARI (EKLEME) ##################
 // Bu dosyaları projenizin ana dizinindeki 'sounds' klasörüne yüklemelisiniz.
-const correctSound = new Audio('./clap.mp3'); 
-const wrongSound = new Audio('./warning.mp3');
+const correctSound = new Audio('./sounds/clap.mp3'); 
+const wrongSound = new Audio('./sounds/warning.mp3');
 // ###############################################################
 
 
@@ -714,7 +720,7 @@ function clearAllScoresWithPassword() {
 }
 // -------------------------------------------------------------------
 
-// ################## YENİ SES ÇALMA FONKSİYONLARI (EKLEME) ##################
+// ################## SES ÇALMA FONKSİYONLARI ##################
 
 function playCorrectSound() {
     // Sesin kesintisiz çalması için
@@ -960,17 +966,16 @@ function touchMove(ev) {
     }
 }
 
+/* 🔥 GÜNCELLENDİ: Elde kutucuğuna mobil cihazlarda bırakma desteği eklendi. 🔥 */
 function touchEnd(ev) {
     if (currentDragElement) {
         ev.preventDefault();
         const touch = ev.changedTouches[0];
-        
+
         // Sürüklenen öğeyi geçici olarak gizle
         currentDragElement.style.display = 'none';
-        
         // Dokunmanın bittiği noktadaki hedef öğeyi bul
         const target = document.elementFromPoint(touch.clientX, touch.clientY);
-        
         // Sürüklenen öğeyi tekrar görünür yap
         currentDragElement.style.display = 'block';
 
@@ -979,7 +984,7 @@ function touchEnd(ev) {
             handleDrop(target, currentDragElement.getAttribute('data-value'), currentDragElement.getAttribute('data-color-class'));
         } 
         
-        // 🚨 YENİ KONTROL: Elde kutucuğuna bırakma kontrolü
+        // Elde kutucuğuna bırakma kontrolü (MOBİL İÇİN DÜZELTME)
         else if (target && target.id === 'carryBox') {
             const value = currentDragElement.getAttribute('data-value');
             if (value !== "") {
@@ -989,7 +994,7 @@ function touchEnd(ev) {
             }
         }
         // -----------------------------------------------------
-
+        
         // Sürüklenen öğenin stilini sıfırla
         currentDragElement.style.position = 'relative';
         currentDragElement.style.left = '0';
@@ -998,6 +1003,7 @@ function touchEnd(ev) {
         currentDragElement = null;
     }
 }
+
 
 function handleDrop(targetElement, value, colorClass) {
     const place = targetElement.getAttribute('data-place');
@@ -1039,23 +1045,21 @@ function checkAnswer() {
     }
 }
 
-// 🚨 GÜNCELLENDİ: Ses çalma eklendi 🚨
 function handleCorrectAnswer() {
     currentScore += 10;
     updateDisplay();
     launchConfetti(); 
-    playCorrectSound(); // 🎉 Alkış sesi çal
+    playCorrectSound(); 
     
     feedbackDisplay.style.color = '#2ecc71'; 
     feedbackDisplay.textContent = 'Aferin! 🌟 (+10 Puan) Yeni İşlem Geliyor...';
     setTimeout(() => { generateNewOperation(); }, 1500);
 }
 
-// 🚨 GÜNCELLENDİ: Ses çalma eklendi 🚨
 function handleWrongAnswer() {
     currentScore = Math.max(0, currentScore - 5);
     updateDisplay();
-    playWrongSound(); // 🔔 Uyarı sesi çal
+    playWrongSound(); 
     
     feedbackDisplay.style.color = '#e74c3c';
     feedbackDisplay.textContent = 'Yanlış yaptın! (-5 Puan) Yeniden dene. 🤔';
@@ -1149,5 +1153,3 @@ document.addEventListener('DOMContentLoaded', () => {
     </script>
 </body>
 </html>
-
-
