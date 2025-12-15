@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eldeli Toplama Macerası - 2. Sınıf</title> 
+    
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* ------------------ TEMEL STİLLER (GÖRSEL DÜZENLEMELER) ------------------ */
+        body {
+            font-family: 'Fredoka', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            /* CANLI MAVİ ARKA PLAN */
+            background-color: #e6f9ff; /* Açık, canlı mavi (Light Cyan) */
+            background-image: linear-gradient(to right, rgba(153, 221, 255, 0.4) 1px, transparent 1px), 
+                              linear-gradient(to bottom, rgba(153, 221, 255, 0.4) 1px, transparent 1px);
+            background-size: 20px 20px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container {
+            /* 🚨 GÜNCELLENEN KISIM: Krem rengi yerine Açık Mavi-Gri */
+            background-color: #f8faff; 
+            background-image: radial-gradient(rgba(0, 0, 0, 0.05) 0.5px, #f8faff 0.5px);
+            background-size: 15px 15px; 
+            
+            padding: 35px; 
+            border-radius: 20px; 
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.05);
+            width: 90%;
+            max-width: 700px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .screen { display: none;
+        }
+        .screen.active { display: block;
+        }
+        
+        /* Header alanı kutular için esnek hale getirildi */
+        .header { 
+            display: flex;
+            justify-content: space-between; 
+            margin-bottom: 25px; 
+            gap: 10px; 
+        }
+        
+        /* Header bilgileri için renkli kutucuklar */
+        .header-item {
+            flex-grow: 1;
+            padding: 10px 5px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #334455;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        /* Renk Tanımlamaları */
+        #playerNameDisplay { background-color: #e7f3ff;
+            border: 2px solid #a8c8e3; color: #2980b9; } /* Mavi */
+        #scoreDisplay { background-color: #e7fff0;
+            border: 2px solid #98e3b5; color: #2ecc71; } /* Yeşil */
+        #timerDisplay { background-color: #fff0e7;
+            border: 2px solid #e3a898; color: #e67e22; } /* Turuncu */
+
+
+        .player-list-wrapper {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-in-out; 
+        }
+        .player-list-wrapper.visible {
+            max-height: 300px;
+            margin-bottom: 25px;
+        }
+
+        .player-list { max-height: 250px; overflow-y: auto;
+        }
+        
+        /* Öğrenci listesi butonları (Mavi) */
+        .player-list button { 
+            display: block;
+            width: 90%; 
+            margin: 10px auto; 
+            padding: 14px; 
+            background-color: #62c4ff; /* Açık ve uyumlu mavi */
+            color: white; 
+            border: none; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            font-size: 19px;
+            transition: background-color 0.3s, transform 0.1s; 
+            box-shadow: 0 4px 6px rgba(0, 153, 255, 0.3); 
+        }
+        .player-list button:hover { 
+            background-color: #3498db; 
+            transform: translateY(-2px);
+        }
+
+        .container button {
+            transition: all 0.3s ease;
+        }
+
+        #togglePlayerListBtn {
+            background-color: #3498db !important;
+            color: white;
+            padding: 16px 35px;
+            font-size: 1.3em;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(52, 152, 219, 0.4);
+        }
+        #togglePlayerListBtn:hover {
+            background-color: #2980b9 !important;
+            box-shadow: 0 6px 8px rgba(52, 152, 219, 0.5);
+        }
+        #togglePlayerListBtn.clicked { 
+             background-color: #e74c3c !important;
+            box-shadow: 0 4px 6px rgba(231, 76, 60, 0.4);
+        }
+
+        #highScores { margin-top: 35px;
+            border-top: 2px solid #e0e0e0; padding-top: 20px; }
+        #highScores h3 { color: #334455;
+        }
+        
+        /* KAYDIRMALI SKOR LİSTESİ İÇİN STİL */
+        #highScoresContent {
+            max-height: 250px; 
+            overflow-y: auto; 
+            padding-right: 5px; 
+        }
+        
+        /* Skor kutucukları (Çok Açık Mavi) */
+        .score-item { 
+            display: flex;
+            justify-content: space-between; 
+            padding: 10px 15px; 
+            margin-bottom: 5px;
+            background-color: #f3faff; /* Çok açık mavi */
+            border-radius: 8px;
+            border: 1px solid #d8e8f8; /* Yumuşak mavi-gri kenarlık */
+            font-weight: 400;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .score-item > span:last-child {
+            display: flex;
+            align-items: center;
+        }
+        
+        /* ################# İŞLEM ALANI STİLLERİ ################# */
+
+        .operation-container {
+            display: grid;
+            grid-template-columns: 30px 140px;
+            justify-content: center;
+            align-items: center;
+            font-size: 3.2em; /* Büyük ekranlar için */
+            font-weight: 600;
+            margin: 15px 0 10px 0; 
+            min-height: 140px;
+        }
+
+        #currentOperationGrid {
+            grid-column: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end; 
+        }
+
+        .op-number {
+            line-height: 0.95;
+            padding-right: 8px;
+            color: #2c3e50;
+        }
+
+        .op-line-separator {
+            grid-column: 1 / span 2;
+            width: 100%;
+            border-bottom: 2px solid #334455; 
+            margin-top: 5px;
+        }
+
+        #opPlusContainer {
+            grid-column: 1;
+            line-height: 1; 
+            align-self: end; 
+            font-size: 1em;
+            color: #3498db; 
+        }
+
+        /* ################# SONUÇ BÖLGESİ STİLLERİ ################# */
+
+.carry-zone {
+    display: flex;
+    justify-content: flex-start; 
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 1.3em;
+    font-weight: 600;
+    grid-column: 2; 
+    padding-left: 10px; 
+}
+
+.carry-box {
+    width: 50px;
+    height: 50px;
+    border: 2px dashed #e67e22;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7em;
+    background-color: #fff7e6;
+color: #FF0000;
+}
+
+        .result-zone { 
+            display: flex;
+            justify-content: center; 
+            margin-top: 10px; 
+            margin-bottom: 15px;
+        }
+        
+        .result-digit { 
+            width: 60px;
+            height: 70px;
+            border: 2px dashed #aebcce;
+            margin: 0 8px;
+            display: flex; 
+            justify-content: center;
+            align-items: center; 
+            font-size: 2.8em; 
+            color: #334455;
+            background-color: #fcfcfc; 
+            border-radius: 8px; 
+            transition: all 0.2s;
+        }
+        .result-digit:hover {
+            background-color: #f0f0f0;
+            border-color: #3498db;
+        }
+        
+        /* ################# PALET STİLLERİ ################# */
+
+        .number-palette { 
+            display: flex;
+            justify-content: center; 
+            gap: 6px; 
+            padding: 4px 0;
+            border-top: 2px solid #e0e0e0;
+        }
+        
+        .draggable-number { 
+            width: 50px;
+            height: 50px; 
+            line-height: 50px; 
+            border-radius: 50%; 
+            font-size: 1.8em; 
+            font-weight: 600; 
+            cursor: grab; 
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.1s, box-shadow 0.1s;
+            color: white; 
+        }
+        .draggable-number:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.4);
+        }
+
+        .top-row {
+             border-top: 2px solid #e0e0e0;
+        }
+        .bottom-row {
+             border-top: none;
+        }
+
+        /* Renk Paleti (0'dan 9'a) */
+        .c0 { background-color: #8D33FF;
+        } 
+        .c1 { background-color: #FF5733;
+        } 
+        .c2 { background-color: #FFC300;
+        } 
+        .c3 { background-color: #33FF57;
+        } 
+        .c4 { background-color: #3357FF;
+        } 
+        .c5 { background-color: #FF33A1;
+        } 
+        .c6 { background-color: #33FFF6;
+        } 
+        .c7 { background-color: #FF8333;
+        } 
+        .c8 { background-color: #A1A1A1;
+        } 
+        .c9 { background-color: #990099;
+        } 
+
+        #feedback { 
+            min-height: 30px;
+            font-size: 1.4em; 
+            font-weight: 700; 
+            margin: 10px 0; 
+        }
+        
+        /* ################# YENİ RENGARENK BAŞLIK STİLLERİ ################# */
+        .rainbow-title {
+            font-size: 2.2em; 
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .rainbow-title span {
+            display: inline-block;
+            transition: transform 0.2s;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Gökkuşağı Renkleri */
+        .r0 { color: #e74c3c; } 
+        .r1 { color: #e67e22; } 
+        .r2 { color: #f1c40f; } 
+        .r3 { color: #2ecc71; } 
+        .r4 { color: #3498db; } 
+        .r5 { color: #9b59b6; } 
+        .r6 { color: #e91e63; } 
+        
+        /* Animasyonlu Renk Döngüsü (Opsiyonel ama hoş durur) */
+        @keyframes color-shift {
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(360deg); }
+        }
+        .rainbow-title:hover {
+            animation: color-shift 10s linear infinite; 
+        }
+
+
+        /* ################# KONFETI STİLİ ################# */
+        .confetti-piece {
+            position: absolute;
+            width: 10px;
+            height: 20px;
+            background: #ff0; 
+            opacity: 0;
+            animation: confetti-fall 3s linear forwards;
+            z-index: 1000;
+        }
+
+        @keyframes confetti-fall {
+            0% { transform: translateY(0) rotateZ(0);
+                opacity: 1; }
+            100% { transform: translateY(100vh) rotateZ(720deg);
+                opacity: 0; }
+            }
+
+        /* ################# ÖZEL MOBİL UYUMLULUK ################# */
+        @media (max-width: 450px) {
+            
+            .container {
+                padding: 15px 5px;
+            }
+            body {
+                padding: 10px;
+            }
+
+            .header-item {
+                font-size: 0.8em;
+                padding: 5px 2px;
+            }
+            
+            /* İYİLEŞTİRME: İşlem fontunu küçültme */
+            .operation-container {
+                font-size: 2.2em; 
+            }
+
+            .result-digit { 
+                width: 45px;
+                height: 55px;
+                font-size: 1.8em;
+                margin: 0 4px;
+            }
+
+            .number-palette { 
+                gap: 4px;
+                padding: 4px 0;
+            }
+            
+            .draggable-number { 
+                width: 38px;
+                height: 38px; 
+                line-height: 38px; 
+                font-size: 1.4em; 
+            }
+            /* Kaydırmalı alanın mobil uyumluluğu */
+            #highScoresContent {
+                max-height: 180px; 
+            }
+            .rainbow-title {
+                font-size: 1.8em; 
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <div id="splashScreen" class="screen active">
+            <h2 class="rainbow-title">
+                <span class="r0">E</span>
+                <span class="r1">L</span>
+                <span class="r2">D</span>
+                <span class="r3">E</span>
+                <span class="r4">L</span>
+                <span class="r5">İ</span>
+                <span class="r6"> </span>
+                <span class="r0">T</span>
+                <span class="r1">O</span>
+                <span class="r2">P</span>
+                <span class="r3">L</span>
+                <span class="r4">A</span>
+                <span class="r5">M</span>
+                <span class="r6">A</span>
+                <span class="r0"> </span>
+                <span class="r1">M</span>
+                <span class="r2">A</span>
+                <span class="r3">C</span>
+                <span class="r4">E</span>
+                <span class="r5">R</span>
+                <span class="r6">A</span>
+                <span class="r0">S</span>
+                <span class="r1">I</span>
+            </h2>
+            <p style="font-size: 1.1em; color: #555;">Oyuna başlamak için adınızı seçin ve bireysel şifrenizi girin.</p>
+
+            <button id="togglePlayerListBtn" onclick="togglePlayerList()">Adınızı Seçin</button>
+     
+            <div class="player-list-wrapper" id="playerListWrapper">
+                <div class="player-list" id="playerListContainer">
+                    </div>
+            </div>
+
+            <button onclick="clearAllScoresWithPassword()" style="
+                background-color: #e74c3c; 
+                color: white;
+                padding: 12px 25px;
+                font-size: 1em;
+                border: none;
+                border-radius: 10px;
+                cursor: pointer;
+                margin-top: 20px;
+                box-shadow: 0 3px 5px rgba(231, 76, 60, 0.3);
+            ">Tüm Skorları Sil (Yönetici)</button>
+            
+            <div id="highScores">
+                <h3>🏆 En İyi Skorlar</h3>
+                <div id="highScoresContent">
+                    </div>
+            </div>
+        </div>
+
+        <div id="gameScreen" class="screen">
+            <div class="header">
+          
+                <span id="playerNameDisplay" class="header-item">Oyuncu: -</span>
+                <span id="scoreDisplay" class="header-item">Puan: 0</span>
+                <span id="timerDisplay" class="header-item">⏳ Süre: 120</span> 
+            </div>
+
+            <div class="operation-container">
+                <div id="opPlusContainer"></div> 
+
+<div class="carry-zone" id="carryZone" 
+style="justify-content: flex-start; padding-right: 8px;">
+        <div class="carry-box" id="carryBox"
+             ondrop="dropCarry(event)"
+             ondragover="allowDrop(event)">?</div>
+    </div>
+          
+                <div id="currentOperationGrid"></div>
+                <div class="op-line-separator"></div> 
+            </div>
+
+
+            <div class="result-zone">
+                <div class="result-digit" data-place="tens" ondrop="drop(event, this)" ondragover="allowDrop(event)">?</div>
+         
+                <div class="result-digit" data-place="ones" ondrop="drop(event, this)" ondragover="allowDrop(event)">?</div>
+        
+            </div>
+            
+            <div id="feedback"></div>
+
+            <div class="number-palette top-row" id="numberPaletteTop"></div>
+            <div class="number-palette bottom-row" id="numberPaletteBottom"></div>
+        </div>
+
+     
+        <div id="gameOverScreen" class="screen">
+            <h2>Oyun Bitti!</h2>
+          
+            <p id="finalScoreText" style="font-size: 1.2em;
+                font-weight: 600; color: #34495e;"></p>
+            <button onclick="window.location.reload()" style="
+                background-color: #2ecc71;
+                color: white;
+                padding: 15px 30px;
+                font-size: 1.2em;
+                border: none;
+                border-radius: 10px;
+                cursor: pointer;
+                margin-top: 15px;
+                box-shadow: 0 4px 6px rgba(46, 204, 113, 0.4);
+            ">Yeniden Başla</button>
+        </div>
+
+    </div>
+
+    <script>
+        // ------------------ JAVASCRIPT KODLARI ------------------
+        
+// YÖNETİCİ ŞİFRESİ
+const ADMIN_PASSWORD = "ogretmen2024";
+const GAME_DURATION = 180; // <-- Sizin güncellediğiniz 180 saniye
+
+// ################## FIREBASE YAPILANDIRMASI ##################
+// BURAYI KENDİ BİLGİLERİNİZLE GÜNCELLEYİN!
+  const firebaseConfig = {
+  apiKey: "AIzaSyCk6EhvH-CXpuedA5jZdpDEC4-Kq-xiDFM",
+  authDomain: "eldeli-toplama-oyunu-ccc66.firebaseapp.com",
+  projectId: "eldeli-toplama-oyunu-ccc66",
+  storageBucket: "eldeli-toplama-oyunu-ccc66.firebasestorage.app",
+  messagingSenderId: "784889726194",
+  appId: "1:784889726194:web:b2511eeee9b885ee0ffc6b"
+};
+
+// Firebase'i başlat
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const SCORES_COLLECTION_NAME = "nonCarryingAdditionScores"; // Veritabanındaki koleksiyon adı
+// ###############################################################
+
+// Öğrenci bilgileri (BU KISIM DEĞİŞMEDİ)
+const STUDENT_PASSWORDS = {
+    // ... (Mevcut öğrenci listesi burada kalacak)
+    "AHMET EFE AYVAZ": "4910",
+            "ALİ ARAS AYYILDIZ": "5335",
+            "ALİ ASAF GÜRBÜZ": "4771",
+            "ALYA DEMİRAL": "2041",
+            "ASEL LENA AYYILDIZ": "2441",
+            "ASIM MİRAÇ KARA": 
+            "2766",
+       
+            "AYBÜKE ÖZKAN": "4850",
+            "BERAT ALİ AKDEMİR": "2532",
+            "BETÜL SENA GÜNGÖR": "2274",
+            "DERİN DURU ÇAL": "5010",
+            "DİDEM SOYLU": "4207",
+            "EMİR RÜZGAR GÖLEŞ": "5822",
+     
+            "ESİLA YİĞİT": "2644",
+     
+            "EYMEN ARAS PULATKAN": "1722",
+            "EYMEN YAYLACIK": "2425",
+            "FATMA HİRA ASLAN": "2310",
+            "FEYZA EMİNE ALTUN": "5142",
+            "HAMZA KAĞAN ÖZTAŞ": "2486",
+            
+            "HATİCE ÇALİMLİ": "1352",
+            "HELİN ADA": "2661",
+   
+            "HÜSNE SERRA CEREN": "5303",
+            "İMRAN YAZICI": "2832",
+            "MİRAÇ ÖZÇELEBİ": "3552",
+            "MUSAB CİHAT KILIÇ": "2841",
+            "NİSANUR FİLİZ": "1234",
+         
+            "ÖMER ASAF GÜNGÖR": "2274",
+            "SAİD HAMZA ASLAN": "2272",
+ 
+            "SİNAN BARAN": "4840",
+            "TUANA TÜRK DERİN ÇETİN": "1961",
+            "YİĞİT ALİ BENLİ": "2559",
+            "YİĞİT ASAF İŞSEVER": "4888",
+   
+            "YUSUF BERAT TANRIVERDİ": "4682",
+           
+            "YUSUF BOZDOĞAN": "4810",
+            "YUSUF EYMEN ÇINAR": "5046",
+            "ZEYNEB MERYEM TAHİROĞLU": "4422",
+            "ZEYNEP AKSOY": "2414",
+            "ZÜMRA BELİZ YILDIRIM": "4949"
+};
+const STUDENT_NAMES = Object.keys(STUDENT_PASSWORDS);
+const INITIAL_PLAYERS = [...STUDENT_NAMES, "Öğretmen"];
+
+// Diğer global değişkenler ve DOM elementleri (DEĞİŞMEDİ)
+let currentScore = 0;
+let timeLeft = GAME_DURATION;
+let timerInterval;
+let currentPlayer = null;
+let currentAnswer = null;
+let resultDigits = { ones: null, tens: null };
+let expectedCarry = 0;
+let userCarry = null;
+let isCarryingOperation = false;
+const splashScreen = document.getElementById('splashScreen');
+const gameScreen = document.getElementById('gameScreen');
+const gameOverScreen = document.getElementById('gameOverScreen');
+const playerListContainer = document.getElementById('playerListContainer');
+const scoreDisplay = document.getElementById('scoreDisplay');
+const timerDisplay = document.getElementById('timerDisplay');
+const feedbackDisplay = document.getElementById('feedback');
+const opPlusContainer = document.getElementById('opPlusContainer');
+const currentOperationGrid = document.getElementById('currentOperationGrid');
+const playerListWrapper = document.getElementById('playerListWrapper');
+const resultDigitsElements = document.querySelectorAll('.result-digit');
+let currentDragElement = null;
+
+// ------------------ FIREBASE YÖNETİMİ (YENİ) ------------------
+
+// 1. Skoru Firebase'e kaydetme (POST yerine geçecektir)
+function saveScore(player, score) {
+    db.collection(SCORES_COLLECTION_NAME).add({
+        player: player,
+        score: score,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp() // Sıralama için zaman damgası
+    })
+    .then(() => {
+        console.log("Skor Firebase'e kaydedildi.");
+        // Başarıyla kaydedildikten sonra skorları yeniden çek
+        renderHighScores(); 
+    })
+    .catch((error) => {
+        console.error("Skor kaydederken hata oluştu:", error);
+    });
+}
+
+// 2. Skorları Firebase'den çekme (GET yerine geçecektir)
+async function fetchGlobalHighScores() {
+    try {
+        // Puana göre azalan sırada sırala ve ilk 50 kaydı çek
+        const snapshot = await db.collection(SCORES_COLLECTION_NAME)
+            .orderBy("score", "desc") 
+            .limit(50)
+            .get();
+
+        let scores = [];
+        snapshot.forEach(doc => {
+            scores.push({
+                id: doc.id,
+                player: doc.data().player,
+                score: doc.data().score,
+                // Timestamp objesini okunabilir tarihe dönüştürür
+                date: doc.data().timestamp ? doc.data().timestamp.toDate() : new Date() 
+            });
+        });
+        return scores;
+    } catch (e) {
+        console.error("Firebase skorları çekerken hata:", e);
+        return [];
+    }
+}
+
+// 3. Skorları Silme (Yönetici şifresiyle)
+function clearAllScoresWithPassword() {
+    const enteredPassword = prompt("Tüm Skorları Silmek İçin YÖNETİCİ şifresini girin:");
+    if (enteredPassword === ADMIN_PASSWORD) {
+        if (!confirm("UYARI: Bu işlem TÜM SKORLARI KALICI OLARAK SİLECEKTİR. Emin misiniz?")) return;
+
+        db.collection(SCORES_COLLECTION_NAME).get().then(snapshot => {
+            const batch = db.batch();
+            snapshot.docs.forEach((doc) => {
+                batch.delete(doc.ref);
+            });
+            return batch.commit();
+        })
+        .then(() => {
+            alert("Tüm skorlar başarıyla silindi!");
+            renderHighScores();
+        })
+        .catch(error => {
+            alert("Skorları silerken hata oluştu: " + error.message);
+        });
+
+    } else if (enteredPassword !== null) {
+        alert('Hata! Girilen şifre yanlış.');
+    }
+}
+// -------------------------------------------------------------------
+
+// ------------------ OYUN AKIŞI FONKSİYONLARI (Çoğu DEĞİŞMEDİ) ------------------
+
+function togglePlayerList() {
+    // ... (Mevcut togglePlayerList fonksiyonunuz)
+    playerListWrapper.classList.toggle('visible');
+    const btn = document.getElementById('togglePlayerListBtn');
+    
+    if (playerListWrapper.classList.contains('visible')) {
+        btn.textContent = 'Listeyi Gizle';
+        btn.classList.add('clicked'); 
+    } else {
+        btn.textContent = 'Adınızı Seçin';
+        btn.classList.remove('clicked'); 
+    }
+}
+
+function checkPasswordAndStartGame(player) {
+    // ... (Mevcut checkPasswordAndStartGame fonksiyonunuz)
+    let requiredPassword = null;
+    if (player === "Öğretmen") {
+        requiredPassword = ADMIN_PASSWORD;
+    } else if (STUDENT_PASSWORDS[player]) {
+        requiredPassword = STUDENT_PASSWORDS[player];
+    } else {
+        alert('Hata: Oyuncu kaydı bulunamadı.');
+        return; 
+    }
+
+    const enteredPassword = prompt(`${player} adıyla başlamak için şifrenizi girin:`);
+    if (enteredPassword === null) {
+        return;
+    }
+    
+    if (enteredPassword === requiredPassword) {
+        startGame(player);
+    } else {
+        alert('Hata: Girilen şifre yanlış. Lütfen tekrar deneyin.');
+    }
+}
+
+function startGame(player) {
+    // ... (Mevcut startGame fonksiyonunuz)
+    currentPlayer = player;
+    currentScore = 0;
+    timeLeft = GAME_DURATION;
+    splashScreen.classList.remove('active');
+    gameScreen.classList.add('active');
+    document.getElementById('playerNameDisplay').textContent = `👤 Oyuncu: ${currentPlayer}`;
+    updateDisplay(); 
+    generateNewOperation();
+    startTimer();
+}
+
+function startTimer() {
+    // ... (Mevcut startTimer fonksiyonunuz)
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = `⏳ Süre: ${timeLeft}`;
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            endGame();
+        }
+    }, 1000);
+}
+
+function endGame() {
+    // ... (Mevcut endGame fonksiyonunuz)
+    gameScreen.classList.remove('active');
+    gameOverScreen.classList.add('active');
+    clearInterval(timerInterval);
+    document.getElementById('finalScoreText').textContent = `${currentPlayer}, Toplam Puanın: ${currentScore}`;
+    // YENİ: Skoru Firebase'e kaydet
+    saveScore(currentPlayer, currentScore);
+}
+
+// 🚨 ÖNCEKİ İSTEK ÜZERİNE GÜNCELLENMİŞ FONKSİYON (Doğru başlangıç süresi için) 🚨
+function updateDisplay() {
+    scoreDisplay.textContent = `⭐ Puan: ${currentScore}`;
+    timerDisplay.textContent = `⏳ Süre: ${timeLeft}`; 
+}
+
+function generateRandomNonCarrying() {
+    // ... (Mevcut generateRandomNonCarrying fonksiyonunuz)
+    let numbers = [];
+    let numCount = Math.random() < 0.5 ? 2 : 3;
+    let sumOnes = 0;
+    let sumTens = 0;
+    for (let i = 0; i < numCount; i++) {
+        let ones, tens;
+        ones = Math.floor(Math.random() * (10 - sumOnes));
+        sumOnes += ones;
+        tens = Math.floor(Math.random() * (10 - sumTens));
+        sumTens += tens;
+        numbers.push(tens * 10 + ones);
+    }
+    
+    if (numbers.every(n => n === 0)) return generateRandomNonCarrying();
+    if (sumTens === 0 && sumOnes < 5) {
+            return generateRandomNonCarrying();
+    }
+
+ expectedCarry = 0;
+    isCarryingOperation = false;
+
+    currentAnswer = sumTens * 10 + sumOnes;
+    return { numbers: numbers, sum: currentAnswer };
+}
+
+function generateRandomCarrying() {
+    let numbers = [];
+    let numCount = Math.random() < 0.5 ? 2 : 3;
+
+    let sum = 0;
+
+    for (let i = 0; i < numCount; i++) {
+        let num = Math.floor(Math.random() * 90) + 10;
+        numbers.push(num);
+        sum += num;
+    }
+
+    if (sum > 99) return generateRandomCarrying();
+
+    const onesSum = numbers.reduce((a, b) => a + (b % 10), 0);
+    if (onesSum < 10) return generateRandomCarrying();
+
+    // 🔽 İŞTE TAM BURASI
+    expectedCarry = Math.floor(onesSum / 10);
+    isCarryingOperation = true;
+    // 🔼
+
+    currentAnswer = sum;
+    return { numbers, sum };
+}
+
+function generateNewOperation() {
+    const operationData = Math.random() < 0.5
+        ? generateRandomNonCarrying()
+        : generateRandomCarrying();
+
+    const numbers = operationData.numbers;
+    currentAnswer = operationData.sum;
+
+    let numHTML = '';
+    numbers.forEach(num => {
+        numHTML += `<div class="op-number">${num}</div>`;
+    });
+    currentOperationGrid.innerHTML = numHTML;
+
+    opPlusContainer.innerHTML = '+';
+
+    resultDigitsElements.forEach(el => {
+        el.textContent = '?';
+        el.className = 'result-digit';
+    });
+    resultDigits = { ones: null, tens: null };
+    feedbackDisplay.textContent = '';
+const carryZone = document.getElementById('carryZone');
+    const carryBox = document.getElementById('carryBox');
+
+    userCarry = null;
+
+    if (isCarryingOperation) {
+        carryZone.style.display = 'flex';
+        carryBox.textContent = '?';
+    } else {
+        carryZone.style.display = 'none';
+    }
+}
+
+const confettiColors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+function launchConfetti() {
+    // ... (Mevcut launchConfetti fonksiyonunuz)
+    const pieces = 50;
+    for (let i = 0; i < pieces; i++) {
+        const piece = document.createElement('div');
+        piece.classList.add('confetti-piece');
+        
+        piece.style.left = Math.random() * 100 + 'vw';
+        piece.style.top = Math.random() * 50 + '%';
+        
+        piece.style.backgroundColor = confettiColors[Math.floor(Math.random() * confettiColors.length)];
+        piece.style.width = Math.random() * 10 + 5 + 'px';
+        piece.style.height = Math.random() * 20 + 10 + 'px';
+        piece.style.animationDuration = (Math.random() * 2 + 1) + 's';
+        
+        document.body.appendChild(piece);
+        piece.addEventListener('animationend', () => {
+            piece.remove();
+        });
+    }
+}
+
+function allowDrop(ev) { ev.preventDefault(); }
+function drag(ev) { ev.dataTransfer.setData("value", ev.target.getAttribute('data-value')); ev.dataTransfer.setData("color", ev.target.getAttribute('data-color-class')); }
+function drop(ev, targetElement) {
+    ev.preventDefault();
+    const value = ev.dataTransfer.getData("value");
+    const colorClass = ev.dataTransfer.getData("color");
+    if (value && colorClass) { handleDrop(targetElement, value, colorClass); }
+}
+
+function dropCarry(ev) {
+    ev.preventDefault();
+    const value = ev.dataTransfer.getData("value");
+
+    if (value !== "") {
+        document.getElementById('carryBox').textContent = value;
+        userCarry = parseInt(value, 10);
+        checkAnswer();
+    }
+}
+
+function touchStart(ev) {
+    if (ev.touches.length === 1 && ev.target.classList.contains('draggable-number')) {
+        currentDragElement = ev.target;
+        currentDragElement.style.position = 'absolute';
+        currentDragElement.style.zIndex = '1000';
+        touchMove(ev); 
+    }
+}
+
+function touchMove(ev) {
+    if (currentDragElement) {
+        ev.preventDefault();
+        const touch = ev.touches[0];
+        currentDragElement.style.left = touch.clientX - (currentDragElement.offsetWidth / 2) + 'px';
+        currentDragElement.style.top = touch.clientY - (currentDragElement.offsetHeight / 2) + 'px';
+    }
+}
+
+function touchEnd(ev) {
+    if (currentDragElement) {
+        ev.preventDefault();
+        const touch = ev.changedTouches[0];
+        
+        currentDragElement.style.display = 'none';
+        const target = document.elementFromPoint(touch.clientX, touch.clientY);
+        currentDragElement.style.display = 'block';
+        if (target && target.classList.contains('result-digit')) {
+            handleDrop(target, currentDragElement.getAttribute('data-value'), currentDragElement.getAttribute('data-color-class'));
+        }
+
+        currentDragElement.style.position = 'relative';
+        currentDragElement.style.left = '0';
+        currentDragElement.style.top = '0';
+        currentDragElement.style.zIndex = '1';
+        currentDragElement = null;
+    }
+}
+
+function handleDrop(targetElement, value, colorClass) {
+    const place = targetElement.getAttribute('data-place');
+    targetElement.textContent = value;
+    targetElement.className = `result-digit ${colorClass}`;
+    resultDigits[place] = parseInt(value);
+    checkAnswer();
+}
+
+function checkAnswer() {
+    const { ones, tens } = resultDigits;
+
+    // Sonuç henüz tamamlanmadıysa çık
+    if (ones === null || tens === null) return;
+
+    // Eldeli işlemde elde yazılmamışsa bekle
+    if (isCarryingOperation && userCarry === null) return;
+
+    const guessedAnswer = (tens * 10) + ones;
+
+    // Eldeli işlem kontrolü
+    if (isCarryingOperation) {
+        if (
+            guessedAnswer === currentAnswer &&
+            userCarry === expectedCarry
+        ) {
+            handleCorrectAnswer();
+        } else {
+            handleWrongAnswer();
+        }
+    } 
+    // Eldesiz işlem kontrolü
+    else {
+        if (guessedAnswer === currentAnswer) {
+            handleCorrectAnswer();
+        } else {
+            handleWrongAnswer();
+        }
+    }
+}
+
+function handleCorrectAnswer() {
+    // ... (Mevcut handleCorrectAnswer fonksiyonunuz)
+    currentScore += 10;
+    updateDisplay();
+    launchConfetti(); 
+    feedbackDisplay.style.color = '#2ecc71'; 
+    feedbackDisplay.textContent = 'Aferin! 🌟 (+10 Puan) Yeni İşlem Geliyor...';
+    setTimeout(() => { generateNewOperation(); }, 1500);
+}
+
+function handleWrongAnswer() {
+    // ... (Mevcut handleWrongAnswer fonksiyonunuz)
+    currentScore = Math.max(0, currentScore - 5);
+    updateDisplay();
+    
+    feedbackDisplay.style.color = '#e74c3c';
+    feedbackDisplay.textContent = 'Yanlış yaptın! (-5 Puan) Yeniden dene. 🤔';
+    
+    resultDigitsElements.forEach(el => {
+        el.textContent = '?';
+        el.className = 'result-digit';
+    });
+    resultDigits = { ones: null, tens: null };
+}
+
+// ------------------ İLK YÜKLEME VE RENDER (GÜNCELLENDİ) ------------------
+
+function renderPlayerList() {
+    // ... (Mevcut renderPlayerList fonksiyonunuz)
+    let players = INITIAL_PLAYERS; 
+    if (playerListContainer) {
+        playerListContainer.innerHTML = players.map(name => 
+            `<button onclick="checkPasswordAndStartGame('${name}')">${name}</button>`
+        ).join('');
+    }
+}
+
+// YENİ: Global skorları çekip ekrana basar
+async function renderHighScores() {
+    const highScoresContent = document.getElementById('highScoresContent');
+    if (!highScoresContent) return;
+
+    highScoresContent.innerHTML = '<p style="margin-top: 15px; color: #777;">🏆 Skorlar Yükleniyor...</p>';
+    
+    const scores = await fetchGlobalHighScores(); 
+
+    const scoreHtml = scores.map((s, index) => {
+        const scoreValue = s.score || 0;
+        return `<div class="score-item"><span>${index + 1}. ${s.player}</span><span>${scoreValue}</span></div>`; 
+    }).join('');
+
+    if (highScoresContent) {
+        highScoresContent.innerHTML = scoreHtml ||
+        '<p style="margin-top: 15px; color: #777;">Henüz skor yok. İlk sen oyna!</p>';
+    }
+}
+
+function renderNumberPalette() {
+    // ... (Mevcut renderNumberPalette fonksiyonunuz)
+    let htmlTop = '';
+    let htmlBottom = '';
+    const colorClasses = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9'];
+    for (let i = 0; i <= 9; i++) {
+        const numberHtml = `
+            <div 
+                class="draggable-number ${colorClasses[i]}" 
+                draggable="true" 
+                data-value="${i}" 
+                data-color-class="${colorClasses[i]}"
+                ondragstart="drag(event)"
+                ondragover="allowDrop(event)"
+                ondrop="drop(event, this)"
+                ontouchstart="touchStart(event)"
+                ontouchmove="touchMove(event)"
+                ontouchend="touchEnd(event)">
+                ${i}
+            </div>
+        `;
+        if (i <= 4) {
+            htmlTop += numberHtml;
+        } 
+        else {
+            htmlBottom += numberHtml;
+        }
+    }
+    
+    const numberPaletteTop = document.getElementById('numberPaletteTop');
+    const numberPaletteBottom = document.getElementById('numberPaletteBottom');
+
+    if (numberPaletteTop) {
+        numberPaletteTop.innerHTML = htmlTop;
+    }
+    if (numberPaletteBottom) {
+        numberPaletteBottom.innerHTML = htmlBottom;
+    }
+}
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    renderPlayerList(); 
+    renderHighScores(); // Artık Firebase'den çekecek
+    renderNumberPalette();
+    splashScreen.classList.add('active'); 
+});
+    </script>
+</body>
+</html>
