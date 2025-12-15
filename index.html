@@ -541,6 +541,13 @@ style="justify-content: flex-start; padding-right: 8px;">
 const ADMIN_PASSWORD = "ogretmen2024";
 const GAME_DURATION = 180; // <-- Sizin güncellediğiniz 180 saniye
 
+// ################## YENİ SES TANIMLAMALARI (EKLEME) ##################
+// Bu dosyaları projenizin ana dizinindeki 'sounds' klasörüne yüklemelisiniz.
+const correctSound = new Audio('./sounds/clap.mp3'); 
+const wrongSound = new Audio('./sounds/warning.mp3');
+// ###############################################################
+
+
 // ################## FIREBASE YAPILANDIRMASI ##################
 // BURAYI KENDİ BİLGİLERİNİZLE GÜNCELLEYİN!
   const firebaseConfig = {
@@ -635,7 +642,7 @@ const playerListWrapper = document.getElementById('playerListWrapper');
 const resultDigitsElements = document.querySelectorAll('.result-digit');
 let currentDragElement = null;
 
-// ------------------ FIREBASE YÖNETİMİ (YENİ) ------------------
+// ------------------ FIREBASE YÖNETİMİ ------------------
 
 // 1. Skoru Firebase'e kaydetme (POST yerine geçecektir)
 function saveScore(player, score) {
@@ -707,7 +714,26 @@ function clearAllScoresWithPassword() {
 }
 // -------------------------------------------------------------------
 
-// ------------------ OYUN AKIŞI FONKSİYONLARI (Çoğu DEĞİŞMEDİ) ------------------
+// ################## YENİ SES ÇALMA FONKSİYONLARI (EKLEME) ##################
+
+function playCorrectSound() {
+    // Sesin kesintisiz çalması için
+    correctSound.pause();
+    correctSound.currentTime = 0; 
+    correctSound.play().catch(e => console.error("Correct sound play failed:", e));
+}
+
+function playWrongSound() {
+    // Sesin kesilip yeniden çalması için durdurup başa sarıyoruz.
+    wrongSound.pause(); 
+    wrongSound.currentTime = 0; 
+    wrongSound.play().catch(e => console.error("Wrong sound play failed:", e));
+}
+
+// ###############################################################
+
+
+// ------------------ OYUN AKIŞI FONKSİYONLARI ------------------
 
 function togglePlayerList() {
     // ... (Mevcut togglePlayerList fonksiyonunuz)
@@ -782,7 +808,6 @@ function endGame() {
     saveScore(currentPlayer, currentScore);
 }
 
-// 🚨 ÖNCEKİ İSTEK ÜZERİNE GÜNCELLENMİŞ FONKSİYON (Doğru başlangıç süresi için) 🚨
 function updateDisplay() {
     scoreDisplay.textContent = `⭐ Puan: ${currentScore}`;
     timerDisplay.textContent = `⏳ Süre: ${timeLeft}`; 
@@ -832,10 +857,8 @@ function generateRandomCarrying() {
     const onesSum = numbers.reduce((a, b) => a + (b % 10), 0);
     if (onesSum < 10) return generateRandomCarrying();
 
-    // 🔽 İŞTE TAM BURASI
     expectedCarry = Math.floor(onesSum / 10);
     isCarryingOperation = true;
-    // 🔼
 
     currentAnswer = sum;
     return { numbers, sum };
@@ -997,20 +1020,23 @@ function checkAnswer() {
     }
 }
 
+// 🚨 GÜNCELLENDİ: Ses çalma eklendi 🚨
 function handleCorrectAnswer() {
-    // ... (Mevcut handleCorrectAnswer fonksiyonunuz)
     currentScore += 10;
     updateDisplay();
     launchConfetti(); 
+    playCorrectSound(); // 🎉 Alkış sesi çal
+    
     feedbackDisplay.style.color = '#2ecc71'; 
     feedbackDisplay.textContent = 'Aferin! 🌟 (+10 Puan) Yeni İşlem Geliyor...';
     setTimeout(() => { generateNewOperation(); }, 1500);
 }
 
+// 🚨 GÜNCELLENDİ: Ses çalma eklendi 🚨
 function handleWrongAnswer() {
-    // ... (Mevcut handleWrongAnswer fonksiyonunuz)
     currentScore = Math.max(0, currentScore - 5);
     updateDisplay();
+    playWrongSound(); // 🔔 Uyarı sesi çal
     
     feedbackDisplay.style.color = '#e74c3c';
     feedbackDisplay.textContent = 'Yanlış yaptın! (-5 Puan) Yeniden dene. 🤔';
@@ -1022,7 +1048,7 @@ function handleWrongAnswer() {
     resultDigits = { ones: null, tens: null };
 }
 
-// ------------------ İLK YÜKLEME VE RENDER (GÜNCELLENDİ) ------------------
+// ------------------ İLK YÜKLEME VE RENDER ------------------
 
 function renderPlayerList() {
     // ... (Mevcut renderPlayerList fonksiyonunuz)
